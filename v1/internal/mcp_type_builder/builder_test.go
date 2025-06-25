@@ -18,8 +18,6 @@ func TestMcpServerBuilder(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, server)
-
-	t.Fail()
 }
 
 type RequestEditorFn func()
