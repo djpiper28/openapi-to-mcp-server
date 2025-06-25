@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
+	structtypemapgenerator "github.com/djpiper28/openapi-to-mcp-server/v1/cmd/struct_type_map_generator"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -40,6 +41,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot create API client", "error", err)
 	}
+
+	err = opts.GenerateTypeMapper()
+	if err != nil {
+		log.Fatal("Cannot create type mapper", "error", err)
+	}
 }
 
 func touchFolder(name string) error {
@@ -61,9 +67,10 @@ func touchFolder(name string) error {
 	return nil
 }
 
+const apiClientPackage = "apiclient"
+
 func (o *Options) GenerateApiClient() error {
-	const clientPackage = "apiclient"
-	clientPath := filepath.Join(o.OutputDirectory, clientPackage)
+	clientPath := filepath.Join(o.OutputDirectory, apiClientPackage)
 
 	log.Info("Creating API client...", "directory", clientPath)
 
@@ -77,9 +84,9 @@ func (o *Options) GenerateApiClient() error {
 output: client.gen.go
 generate:
   models: true
-  client: true`, clientPackage)
+  client: true`, apiClientPackage)
 
-	err = os.WriteFile(filepath.Join(clientPath, configFile), []byte(configData), 0777)
+	err = os.WriteFile(filepath.Join(clientPath, configFile), []byte(configData), 0666)
 	if err != nil {
 		return errors.Join(errors.New("Cannot create config for oapi-codegen"), err)
 	}
@@ -110,5 +117,27 @@ generate:
 		return errors.Join(errors.New("Cannot start oapi-codegen"), err)
 	}
 
+	log.Info("Completed API client generation")
+	return nil
+}
+
+func (o *Options) GenerateTypeMapper() error {
+	log.Info("Creating type map for API client...")
+	inputPackage := o.PackageName + "/" + apiClientPackage
+	clientPath := filepath.Join(o.OutputDirectory, apiClientPackage, "client.gen.go")
+
+	stats, err := structtypemapgenerator.Generate(structtypemapgenerator.Args{
+		InputPackageName:  inputPackage,
+		InputFile:         clientPath,
+		OutputPackageName: o.PackageName,
+		OutputFile:        filepath.Join(o.OutputDirectory, "mapper.go"),
+	})
+
+	if err != nil {
+		return errors.Join(errors.New("Cannot create struct type map"), err)
+	}
+
+	log.Infof("Created %d types in type mapper", len(stats.TypesFound))
+	log.Info("Completed type mapper generation")
 	return nil
 }
