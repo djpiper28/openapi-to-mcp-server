@@ -27,7 +27,12 @@ func New[T client](Name, Version string, Client T) *Builder[T] {
 	}
 }
 
-var simpleCall = regexp.MustCompile("func\\(context\\.Context, \\.\\.\\.[^\\s]*\\.RequestEditorFn\\) \\(.*, error\\)")
+var (
+	// An HTTP call with no arguments/body
+	simpleCall = regexp.MustCompile("func\\([^,]+\\.[^,]+, context\\.Context, \\.\\.\\.[^,]+\\.RequestEditorFn\\) \\(.+, error\\)")
+	// An HTTP call with arguments/body
+	normalCall = regexp.MustCompile("func\\([^,]+\\.[^,]+, context\\.Context, [^,]+\\.[^,]+, \\.\\.\\.[^,]+\\.RequestEditorFn\\) \\(.+, error\\)")
+)
 
 func (b *Builder[T]) addTool(method reflect.Method, server *server.MCPServer) error {
 	// Cannot call this damn method so get rid of it
@@ -43,11 +48,19 @@ func (b *Builder[T]) addTool(method reflect.Method, server *server.MCPServer) er
 	signature := method.Type.String()
 	log.Info("Looking at method", "signature", signature, "method", method.Name)
 
+	if simpleCall.MatchString(signature) {
+		log.Info("Found simple call", "method", method.Name)
+	} else if normalCall.MatchString(signature) {
+		log.Info("Found normal call", "method", method.Name)
+	}
+
 	return nil
 }
 
 func (b *Builder[T]) addTools(server *server.MCPServer) error {
 	r := reflect.TypeOf(b.Client)
+	log.Infof("Scanning %d methods", r.NumMethod())
+
 	for i := range r.NumMethod() {
 		meth := r.Method(i)
 		err := b.addTool(meth, server)

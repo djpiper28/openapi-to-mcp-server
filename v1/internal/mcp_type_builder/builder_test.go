@@ -12,11 +12,14 @@ import (
 )
 
 func TestMcpServerBuilder(t *testing.T) {
-	b := mcptypebuilder.New("test", "v1.0.0", Client{})
+	var client ClientInterface = &Client{Server: "Testing 123"}
+	b := mcptypebuilder.New("test", "v1.0.0", client)
 	server, err := b.Build()
 
 	require.NoError(t, err)
 	require.NotNil(t, server)
+
+	t.Fail()
 }
 
 type RequestEditorFn func()
