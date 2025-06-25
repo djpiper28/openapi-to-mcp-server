@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
@@ -61,15 +62,52 @@ func touchFolder(name string) error {
 }
 
 func (o *Options) GenerateApiClient() error {
-	const clientPackage = "api-client"
+	const clientPackage = "apiclient"
 	clientPath := filepath.Join(o.OutputDirectory, clientPackage)
-	packageName := o.PackageName + clientPackage
 
-	log.Info("Creating API client...", "go package", packageName, "directory", clientPath)
+	log.Info("Creating API client...", "directory", clientPath)
 
 	err := touchFolder(clientPath)
 	if err != nil {
 		return errors.Join(fmt.Errorf("Cannot create output folder (%s) for API client", clientPath), err)
+	}
+
+	const configFile = "config.yaml"
+	configData := fmt.Sprintf(`package: %s
+output: client.gen.go
+generate:
+  models: true
+  client: true`, clientPackage)
+
+	err = os.WriteFile(filepath.Join(clientPath, configFile), []byte(configData), 0777)
+	if err != nil {
+		return errors.Join(errors.New("Cannot create config for oapi-codegen"), err)
+	}
+
+	goPath, err := exec.LookPath("go")
+	if err != nil {
+		return errors.Join(errors.New("Cannot find go in your path"), err)
+	}
+
+	cmd := exec.Cmd{
+		Path: goPath,
+		Args: []string{
+			goPath,
+			"tool",
+			"oapi-codegen",
+			"-config",
+			configFile,
+			o.InputFile,
+		},
+		Dir:    clientPath,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	log.Debug("Executing", "command", cmd)
+	err = cmd.Run()
+	if err != nil {
+		return errors.Join(errors.New("Cannot start oapi-codegen"), err)
 	}
 
 	return nil
