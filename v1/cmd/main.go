@@ -21,9 +21,18 @@ func main() {
 
 	var opts Options
 	parser := flags.NewParser(&opts, flags.Default)
-	_, err := parser.Parse()
+	rest, err := parser.Parse()
 	if err != nil {
 		log.Fatal("Cannot parse command line arguments", "error", err)
+	}
+
+	if len(rest) > 0 {
+		log.Fatal("There are unused command line arguments", "unused", rest)
+	}
+
+	err = touchFolder(opts.OutputDirectory)
+	if err != nil {
+		log.Fatal("Cannot create output directory", "error", err)
 	}
 
 	err = opts.GenerateApiClient()
@@ -35,9 +44,11 @@ func main() {
 func touchFolder(name string) error {
 	f, err := os.Stat(name)
 	if err != nil {
-		_, err = os.Create(name)
+		log.Debug("Cannot stat folder", "error", err)
+
+		err = os.MkdirAll(name, 0777)
 		if err != nil {
-			return errors.New("Cannot create folder")
+			return errors.Join(errors.New("Cannot create folder"), err)
 		}
 		return nil
 	}
@@ -58,7 +69,7 @@ func (o *Options) GenerateApiClient() error {
 
 	err := touchFolder(clientPath)
 	if err != nil {
-		return errors.Join(fmt.Errorf("Cannot create output folder for API client"), err)
+		return errors.Join(fmt.Errorf("Cannot create output folder (%s) for API client", clientPath), err)
 	}
 
 	return nil
