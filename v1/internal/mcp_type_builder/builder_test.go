@@ -2,8 +2,10 @@ package mcptypebuilder_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"testing"
 
 	mcptypebuilder "github.com/djpiper28/openapi-to-mcp-server/v1/internal/mcp_type_builder"
@@ -13,7 +15,7 @@ import (
 
 func TestMcpServerBuilder(t *testing.T) {
 	var client ClientInterface = &Client{Server: "Testing 123"}
-	b := mcptypebuilder.New("test", "v1.0.0", client)
+	b := mcptypebuilder.New("test", "v1.0.0", client, &Mapper{})
 	server, err := b.Build()
 
 	require.NoError(t, err)
@@ -37,6 +39,20 @@ type ClientInterface interface {
 	GetApiV1AccessControlPointLives(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 	GetApiV1AccessControlPointLivesId(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 	GetApiV1AccessControlPoints(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// Mocked struct mapper, this will be codegened usually
+type Mapper struct{}
+
+func (m *Mapper) StructType(key string) (reflect.Type, error) {
+	switch key {
+	case reflect.ValueOf(PutApiV1AccessControlConfigJSONRequestBody{}).Type().Name():
+		return reflect.TypeOf(PutApiV1AccessControlConfigJSONRequestBody{}), nil
+	case reflect.ValueOf(openapi_types.UUID{}).Type().Name():
+		return reflect.TypeOf(openapi_types.UUID{}), nil
+	default:
+		return nil, errors.New("Unused type")
+	}
 }
 
 type Client struct {
