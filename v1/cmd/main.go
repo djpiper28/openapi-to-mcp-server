@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	structtypemapgenerator "github.com/djpiper28/openapi-to-mcp-server/v1/cmd/struct_type_map_generator"
@@ -45,6 +46,11 @@ func main() {
 	err = opts.GenerateTypeMapper()
 	if err != nil {
 		log.Fatal("Cannot create type mapper", "error", err)
+	}
+
+	err = opts.GenerateServer()
+	if err != nil {
+		log.Fatal("Cannot create server", "error", err)
 	}
 }
 
@@ -139,5 +145,52 @@ func (o *Options) GenerateTypeMapper() error {
 
 	log.Infof("Created %d types in type mapper", len(stats.TypesFound))
 	log.Info("Completed type mapper generation")
+	return nil
+}
+
+func (o *Options) GenerateServer() error {
+	log.Info("Creating server.go...")
+
+	parts := strings.Split(o.PackageName, "/")
+	packageNameShort := parts[len(parts)-1]
+
+	buffer := fmt.Sprintf(`package %s
+
+import (
+	"errors"
+
+  "%s/%s"
+	builder "github.com/djpiper28/openapi-to-mcp-server/v1/lib/mcp_type_builder"
+	"github.com/mark3labs/mcp-go/server"
+)
+`, packageNameShort, o.PackageName, apiClientPackage)
+
+	buffer += fmt.Sprintf(`
+func New(baseUrl, name, version string, requestEditorFns ...builder.RequestEditorFn) (*server.MCPServer, error) {
+	client, err := %s.NewClient(baseUrl)
+	if err != nil {
+		return nil, errors.Join(errors.New("Cannot create client"), err)
+	}
+
+	b := builder.New(name, version, client, newMapper())
+
+	for _, fn := range requestEditorFns {
+		b.AddRequestEditorFn(fn)
+	}
+
+	server, err := b.Build()
+	if err != nil {
+		return nil, errors.Join(errors.New("Cannot create server"), err)
+	}
+
+	return server, nil
+}`, apiClientPackage)
+
+	err := os.WriteFile(filepath.Join(o.OutputDirectory, "server.go"), []byte(buffer), 0666)
+	if err != nil {
+		return errors.Join(errors.New("Cannot save server.go"), err)
+	}
+
+	log.Info("Created server.go...")
 	return nil
 }
