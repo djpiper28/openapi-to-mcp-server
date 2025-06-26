@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/invopop/jsonschema"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -117,13 +118,20 @@ func (b *Builder[T]) simpleCall(method reflect.Method) func(context.Context, mcp
 	}
 }
 
-func (b *Builder[T]) advancedCall(method reflect.Method) (func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error), error) {
+func (b *Builder[T]) advancedCall(method reflect.Method, tool *mcp.Tool) (func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error), error) {
 	log := log.With("method", method.Name, "type", "advancedCall")
 	signature := method.Type.String()
 	argType, err := b.typeOfNormalCall(signature)
 	if err != nil {
 		return nil, err
 	}
+
+	schema, err := jsonschema.Reflect(reflect.New(argType.Elem()).Interface()).MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	tool.RawInputSchema = schema
 
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		doAction := func() (*mcp.CallToolResult, error) {
@@ -206,7 +214,7 @@ func (b *Builder[T]) addTool(method reflect.Method, server *server.MCPServer) er
 		log.Info("Found normal call")
 
 		var err error
-		handler, err = b.advancedCall(method)
+		handler, err = b.advancedCall(method, &tool)
 		if err != nil {
 			err = errors.Join(fmt.Errorf("Cannot create tool for method (%s)", method.Name), err)
 			log.Error("Cannot generate request type", "error", err)
