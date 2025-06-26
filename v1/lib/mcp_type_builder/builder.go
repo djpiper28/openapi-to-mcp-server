@@ -126,7 +126,7 @@ func (b *Builder[T]) advancedCall(method reflect.Method, tool *mcp.Tool) (func(c
 		return nil, err
 	}
 
-	schema, err := jsonschema.Reflect(reflect.New(argType.Elem()).Interface()).MarshalJSON()
+	schema, err := jsonschema.Reflect(reflect.New(argType).Interface()).MarshalJSON()
 	if err != nil {
 		return nil, err
 	}

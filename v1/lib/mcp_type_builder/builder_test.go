@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	mcptypebuilder "github.com/djpiper28/openapi-to-mcp-server/v1/internal/mcp_type_builder"
+	mcptypebuilder "github.com/djpiper28/openapi-to-mcp-server/v1/lib/mcp_type_builder"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/stretchr/testify/require"
 )
