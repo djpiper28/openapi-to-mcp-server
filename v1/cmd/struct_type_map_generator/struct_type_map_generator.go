@@ -43,6 +43,7 @@ func Generate(args Args) (*StructTypeMapGenerator, error) {
   "fmt"
   "reflect"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
   target "%s"
 )
 
@@ -60,6 +61,12 @@ func (s *structMapper) StructType(key string) (reflect.Type, error) {
 
 	state.generateMapEntries(string(data))
 	state.buffer += `
+  case "UUID":
+    return nil, reflect.TypeOf(openapi_types.UUID{})
+  case "Date":
+    return nil, reflect.TypeOf(openapi_types.Date{})
+  case "Email"
+    return nil, reflect.TypeOf(openapi_types.Email{})
   default:
     return nil, fmt.Errorf("Cannot find type %s", key)
   }
