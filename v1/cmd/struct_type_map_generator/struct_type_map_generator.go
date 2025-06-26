@@ -63,10 +63,10 @@ func (s *structMapper) StructType(key string) (reflect.Type, error) {
 	state.buffer += `
   case "UUID":
     return nil, reflect.TypeOf(openapi_types.UUID{})
-  case "Date":
-    return nil, reflect.TypeOf(openapi_types.Date{})
-  case "Email"
-    return nil, reflect.TypeOf(openapi_types.Email{})
+  // case "Date":
+  //   return nil, reflect.TypeOf(openapi_types.Date{})
+  // case "Email":
+  //   return nil, reflect.TypeOf(openapi_types.Email{})
   default:
     return nil, fmt.Errorf("Cannot find type %s", key)
   }
